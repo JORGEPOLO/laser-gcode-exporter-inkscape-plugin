@@ -124,8 +124,8 @@ VERSION = "1.0.1"
 
 STRAIGHT_TOLERANCE = 0.0001
 STRAIGHT_DISTANCE_TOLERANCE = 0.0001
-LASER_ON = "M3 ;turn the laser on"          # LASER ON MCODE
-LASER_OFF = "M5 ;turn the laser off\n"        # LASER OFF MCODE
+LASER_ON = "M5 ;turn the laser on"          # LASER ON MCODE
+LASER_OFF = "M3S100 ;turn the laser off\n"        # LASER OFF MCODE
 
 HEADER_TEXT = ""
 FOOTER_TEXT = ""
