@@ -124,8 +124,8 @@ VERSION = "1.0.1"
 
 STRAIGHT_TOLERANCE = 0.0001
 STRAIGHT_DISTANCE_TOLERANCE = 0.0001
-LASER_ON = "M5 ;turn the laser on"          # LASER ON MCODE
-LASER_OFF = "M3S100 ;turn the laser off\n"        # LASER OFF MCODE
+LASER_ON = "M3 S0\n"          # LASER ON MCODE
+LASER_OFF = "M3 S100\nG4P0.1\n"        # LASER OFF MCODE
 
 HEADER_TEXT = ""
 FOOTER_TEXT = ""
@@ -846,10 +846,11 @@ class Gcode_tools(inkex.Effect):
             if s[1] == 'move':
                 #Turn off the laser if it was on previously.
                 #if lg != "G00":
-                #    gcode += LASER_OFF + "\n"
-				
-                gcode += "G00 " + self.make_args(si[0]) + " F%i " % self.options.Mfeed + "\n"
+                if not gcode.endswith(LASER_OFF):
+		    gcode += LASER_OFF 
+                gcode += "G00 " + self.make_args(si[0]) + " F1%i " % self.options.Mfeed + "\n"
                 lg = 'G00'
+		firstGCode = False
 
             elif s[1] == 'end':
                 lg = 'G00'
@@ -857,10 +858,10 @@ class Gcode_tools(inkex.Effect):
 			#G01 : Move with the laser turned on to a new point
             elif s[1] == 'line':
                 if not firstGCode: #Include the ppm values for the first G01 command in the set.
-                    gcode += "G01 " + self.make_args(si[0]) + " S%.2f " % laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
+                    gcode += LASER_ON + "\n"+"G01 " + self.make_args(si[0]) +"\n" # + " S%.2f " % laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
                     firstGCode = True
                 else:
-                    gcode += "G01 " + self.make_args(si[0]) + "\n"
+                	gcode += "G01 " + self.make_args(si[0]) + "\n"
                 lg = 'G01'
 
             #G02 and G03 : Move in an arc with the laser turned on.
@@ -871,16 +872,19 @@ class Gcode_tools(inkex.Effect):
                     r1 = P(s[0])-P(s[2])
                     r2 = P(si[0])-P(s[2])
                     if abs(r1.mag() - r2.mag()) < 0.001:
+			if not firstGCode:
+			    gcode += LASER_ON + "\n";
+
                         if (s[3] > 0):
                             gcode += cwArc
                         else:
                             gcode += ccwArc
-                        
+
                         if not firstGCode: #Include the ppm values for the first G01 command in the set.
-                            gcode += " " + self.make_args(si[0] + [None, dx, dy, None]) + "S%.2f " % laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
+                            gcode += " " + self.make_args(si[0] + [None, dx, dy, None]) + "\n" #"S%.2f " #% laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
                             firstGCode = True
                         else:
-                            gcode += " " + self.make_args(si[0] + [None, dx, dy, None]) + "\n"
+                       	    gcode += " " + self.make_args(si[0] + [None, dx, dy, None]) + "\n"
 
                     else:
                         r = (r1.mag()+r2.mag())/2
@@ -890,7 +894,7 @@ class Gcode_tools(inkex.Effect):
                             gcode += ccwArc
 							
                         if not firstGCode: #Include the ppm values for the first G01 command in the set.
-                            gcode += " " + self.make_args(si[0]) + " R%f" % (r*self.options.Xscale) + "S%.2f " % laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
+                            gcode += LASER_ON + "\n"+" " + self.make_args(si[0]) + " R%f" % (r*self.options.Xscale) + "S%.2f " #% laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
                             firstGCode = True
                         else:
                             gcode += " " + self.make_args(si[0]) + " R%f" % (r*self.options.Xscale) + "\n"
@@ -900,7 +904,7 @@ class Gcode_tools(inkex.Effect):
                 #The arc is less than the minimum arc radius, draw it as a straight line.
                 else:
                     if not firstGCode: #Include the ppm values for the first G01 command in the set.
-						gcode += "G01 " + self.make_args(si[0]) + "S%.2f " % laserPower +  "%s " % cutFeed + "%s" % ppmValue + "\n"
+						gcode += LASER_ON + "\n"+"G01 " + self.make_args(si[0]) +"\n" # + " S%.2f " % laserPower + "%s " % cutFeed + "%s" % ppmValue + "\n"
 						firstGCode = True
                     else:
 						gcode += "G01 " + self.make_args(si[0]) + "\n"
@@ -911,7 +915,8 @@ class Gcode_tools(inkex.Effect):
     
         #The end of the layer.
         if si[1] == 'end':
-            gcode += LASER_OFF
+	    if not gcode.endswith(LASER_OFF):
+                gcode += LASER_OFF
 
 
         return gcode
@@ -1235,7 +1240,7 @@ class Gcode_tools(inkex.Effect):
                
                 #Turnkey : Always output the layer header for information.
                 if (len(layers) > 0):
-                    header_data += LASER_OFF+"\n"
+                    header_data += LASER_OFF
                     size = 60
                     header_data += ";(%s)\n" % ("*"*size)
                     header_data += (";(***** Layer: %%-%ds *****)\n" % (size-19)) % (originalLayerName)
